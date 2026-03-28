@@ -1,4 +1,5 @@
-# System Zarządzania Rezerwacjami Sal w Przedsiębiorstwie
+# System Zarządzania Rezerwacjami Sal w Przedsiębiorstwie - PROJEKT STUDENCKI Z PRZEDMIOTU PROJEKT ZESPOŁOWY
+
 
 Wewnętrzna aplikacja webowa przeznaczona do zarządzania i rezerwacji sal konferencyjnych w firmie. Projekt ma na celu ułatwienie pracownikom przeglądu dostępnych przestrzeni biurowych oraz weryfikację ich wyposażenia. 
 
