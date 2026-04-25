@@ -1,4 +1,4 @@
-﻿# System Zarzadzania Rezerwacjami Sal - projekt studencki
+﻿# System Zarzadzania Rezerwacjami Sal - Proejkt z przedmiotu Projekt Zespołowy, pokazywany co 2 tygodnie na zajęciach.
 
 Wewnetrzna aplikacja webowa do zarzadzania i rezerwacji sal konferencyjnych w firmie.
 
