@@ -1,6 +1,6 @@
 ﻿# System Zarzadzania Rezerwacjami Sal - Proejkt z przedmiotu Projekt Zespołowy, pokazywany co 2 tygodnie na zajęciach.
 
-Projet jest robiony stopniowo, nie jest idealny, ale wszystkie najważniejsze zmiany potrzebne do poddania go ocenie będą poprawione lub wykonane później. (Migracja bazy, hashowanie haseł, ważne informacje poza kodem itp).
+Projet jest robiony stopniowo i jest to prototyp, nie jest idealny, ale wszystkie najważniejsze zmiany potrzebne do poddania go ocenie będą poprawione lub wykonane później. (Podział plików na osobne, Migracja bazy, Hashowanie haseł, Ważne informacje poza kodem itp).
 
 Wewnetrzna aplikacja webowa do zarzadzania i rezerwacji sal konferencyjnych w firmie.
 
