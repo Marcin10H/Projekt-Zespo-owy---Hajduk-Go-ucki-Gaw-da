@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
@@ -9,15 +9,29 @@
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-dark mb-4 custom-nav">
-        <div class="container">
+        <div class="container d-flex justify-content-between">
             <span class="navbar-brand mb-0 h1">System Zarządzania Rezerwacjami</span>
+            <div class="d-flex align-items-center gap-3 text-white">
+                <span>{{ session['username'] }} ({{ session['role'] }})</span>
+                <form method="POST" action="{{ url_for('logout') }}" class="m-0">
+                    <button type="submit" class="btn btn-sm btn-outline-light">Wyloguj</button>
+                </form>
+            </div>
         </div>
     </nav>
 
     <div class="container">
+        {% if error %}
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="alert alert-success" role="alert">{{ success }}</div>
+        {% endif %}
+
         <div class="row">
+            {% if session['role'] == 'admin' %}
             <div class="col-md-4 mb-4">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm mb-3">
                     <div class="card-body">
                         <h5 class="card-title text-success mb-3">➕ Dodaj nową salę</h5>
                         <form id="addRoomForm">
@@ -37,9 +51,49 @@
                         </form>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary mb-3">👤 Dodaj pracownika</h5>
+                        <form method="POST" action="{{ url_for('add_user') }}">
+                            <div class="mb-3">
+                                <label class="form-label">Nazwa użytkownika</label>
+                                <input type="text" class="form-control" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Login</label>
+                                <input type="text" class="form-control" name="login" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Hasło startowe</label>
+                                <input type="password" class="form-control" name="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Dodaj użytkownika</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary mb-3">🔐 Zmień hasło</h5>
+                        {% if session.get('must_change_password') %}
+                        <p class="text-muted">To hasło jest startowe - ustaw teraz własne.</p>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('change_password') }}">
+                            <div class="mb-3">
+                                <label class="form-label">Nowe hasło</label>
+                                <input type="password" class="form-control" name="new_password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Zapisz nowe hasło</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="{{ 'col-md-8' if session['role'] == 'admin' else 'col-md-8' }}">
                 <h2 class="mb-4">Dostępne Sale Konferencyjne</h2>
                 <div class="row">
                     {% for room in rooms %}
@@ -49,17 +103,19 @@
                                 <h5 class="card-title text-primary">{{ room.name }}</h5>
                                 <p class="card-text mb-4">
                                     <strong>Miejsca:</strong> {{ room.capacity }}<br>
-                                    <strong>Rzutnik:</strong> {{ "✅ Tak" if room.has_projector else "❌ Brak" }} 
+                                    <strong>Rzutnik:</strong> {{ "✅ Tak" if room.has_projector else "❌ Brak" }}
                                 </p>
                                 <div class="mt-auto">
                                     <button class="btn btn-outline-primary w-100 mb-2">Zarezerwuj</button>
-                                    <button class="btn btn-outline-secondary w-100 mb-2" 
-                                        data-id="{{ room.id }}" 
-                                        data-name="{{ room.name }}" 
-                                        data-capacity="{{ room.capacity }}" 
+                                    {% if session['role'] == 'admin' %}
+                                    <button class="btn btn-outline-secondary w-100 mb-2"
+                                        data-id="{{ room.id }}"
+                                        data-name="{{ room.name }}"
+                                        data-capacity="{{ room.capacity }}"
                                         data-projector="{{ 'true' if room.has_projector else 'false' }}"
                                         onclick="openEditModal(this)">✏️ Edytuj</button>
                                     <button class="btn btn-outline-danger w-100" data-id="{{ room.id }}" onclick="deleteRoom(this.dataset.id)">🗑️ Usuń salę</button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

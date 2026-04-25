@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie - System Rezerwacji</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark mb-4 custom-nav">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">System Zarządzania Rezerwacjami</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4 class="mb-3 text-primary">Logowanie</h4>
+                        {% if error %}
+                        <div class="alert alert-danger" role="alert">{{ error }}</div>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('login') }}">
+                            <div class="mb-3">
+                                <label class="form-label">Rola</label>
+                                <select class="form-select" name="role" required>
+                                    <option value="">Wybierz rolę</option>
+                                    <option value="pracownik">Pracownik</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Login</label>
+                                <input type="text" class="form-control" name="login" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Hasło</label>
+                                <input type="password" class="form-control" name="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Zaloguj</button>
+                        </form>
+                        <small class="text-muted d-block mt-3">Konto startowe administratora: login <b>admin</b>, hasło <b>admin</b></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,48 +1,38 @@
-# System Zarządzania Rezerwacjami Sal w Przedsiębiorstwie - PROJEKT STUDENCKI Z PRZEDMIOTU PROJEKT ZESPOŁOWY
+﻿# System Zarzadzania Rezerwacjami Sal - projekt studencki
 
+Wewnetrzna aplikacja webowa do zarzadzania i rezerwacji sal konferencyjnych w firmie.
 
-Wewnętrzna aplikacja webowa przeznaczona do zarządzania i rezerwacji sal konferencyjnych w firmie. Projekt ma na celu ułatwienie pracownikom przeglądu dostępnych przestrzeni biurowych oraz weryfikację ich wyposażenia. 
+## Aktualny stan projektu
+Obecna wersja obejmuje:
+* logowanie z podzialem na role admin/pracownik,
+* panel administratora do zarzadzania salami,
+* mozliwosc dodawania pracownikow przez administratora,
+* mozliwosc zmiany hasla przez pracownika,
+* baze danych SQLite z automatycznym kontem startowym admin/admin.
 
-## 📌 Aktualny stan projektu
-Obecna wersja to działający prototyp, który obejmuje:
-* Skonfigurowane środowisko i podstawową architekturę aplikacji.
-* Utworzoną lokalną bazę danych pozwalającą na przechowywanie informacji o salach, takich jak nazwa, pojemność, wyposażenie).
-* Skrypt zasilający bazę danymi testowymi.
-* Podstawowy interfejs użytkownika, który na bieżąco pobiera i wyświetla listę dostępnych sal bezpośrednio z bazy danych.
-
----
-
-## 🚀 Instrukcja Uruchomienia Lokalnego
-
-Aby uruchomić projekt na swoim komputerze i przetestować jego działanie:
+## Instrukcja uruchomienia lokalnego
 
 ### 1. Klonowanie repozytorium
-Pobierz kod na swój dysk i przejdź do folderu z projektem:
 ```bash
 git clone https://github.com/Marcin10H/Projekt-Zespo-owy---Hajduk-Go-ucki-Gaw-da.git
 cd Projekt-Zespo-owy---Hajduk-Go-ucki-Gaw-da
+```
 
-### 2. Utworzenie i aktywacja wirtualnego środowiska (venv)
+### 2. Utworzenie i aktywacja srodowiska wirtualnego
+```bash
 python -m venv venv
 .\venv\Scripts\activate
+```
 
-### 3. Instalacja niezbędnych pakietów
-Można użyć jednej z poniższych komend, aby zainstalować wymagane biblioteki:
+### 3. Instalacja bibliotek
+```bash
 python -m pip install Flask flask-sqlalchemy
-# lub
-pip install Flask flask-sqlalchemy
+```
 
-### 4. Inicjalizacja Bazy Danych
-Zanim uruchomisz aplikację po raz pierwszy, wygeneruj plik bazy danych, która wypełni się testowymi salami:
-python init_db.py
-
-## 5. Uruchomienie Serwera
-Aby wystartować aplikację, wpisz komendę:
+### 4. Uruchomienie serwera
+```bash
 python app.py
+```
 
-Aplikacja będzie gotowa do testów w przeglądarce pod adresem:
+Aplikacja bedzie dostepna pod adresem:
 http://127.0.0.1:5000
-
-
-
-

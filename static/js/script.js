@@ -1,27 +1,42 @@
-document.getElementById('addRoomForm').addEventListener('submit', async function(event) {
-    event.preventDefault(); 
-    const name = document.getElementById('roomName').value;
-    const capacity = parseInt(document.getElementById('roomCapacity').value);
-    const hasProjector = document.getElementById('roomProjector').checked;
+﻿const addRoomForm = document.getElementById('addRoomForm');
+if (addRoomForm) {
+    addRoomForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const name = document.getElementById('roomName').value;
+        const capacity = parseInt(document.getElementById('roomCapacity').value);
+        const hasProjector = document.getElementById('roomProjector').checked;
 
-    try {
-        const response = await fetch('/api/rooms', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, capacity: capacity, has_projector: hasProjector })
-        });
-        const data = await response.json();
-        if (response.ok) { window.location.reload(); } else { alert('Błąd: ' + data.error); }
-    } catch (error) { alert('Wystąpił błąd podczas komunikacji z serwerem.'); }
-});
+        try {
+            const response = await fetch('/api/rooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, capacity: capacity, has_projector: hasProjector })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Błąd: ' + data.error);
+            }
+        } catch (error) {
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        }
+    });
+}
 
 async function deleteRoom(roomId) {
-    if (!confirm('Czy na pewno chcesz usunąć tę salę?')) return; 
+    if (!confirm('Czy na pewno chcesz usunąć tę salę?')) return;
     try {
         const response = await fetch(`/api/rooms/${roomId}`, { method: 'DELETE' });
         const data = await response.json();
-        if (response.ok) { window.location.reload(); } else { alert('Błąd: ' + data.error); }
-    } catch (error) { alert('Wystąpił błąd podczas komunikacji z serwerem.'); }
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Błąd: ' + data.error);
+        }
+    } catch (error) {
+        alert('Wystąpił błąd podczas komunikacji z serwerem.');
+    }
 }
 
 let editModal;
@@ -41,27 +56,30 @@ function openEditModal(buttonElement) {
     editModal.show();
 }
 
-document.getElementById('editRoomForm').addEventListener('submit', async function(event) {
-    event.preventDefault(); 
-    const id = document.getElementById('editRoomId').value;
-    const name = document.getElementById('editRoomName').value;
-    const capacity = parseInt(document.getElementById('editRoomCapacity').value);
-    const hasProjector = document.getElementById('editRoomProjector').checked;
+const editRoomForm = document.getElementById('editRoomForm');
+if (editRoomForm) {
+    editRoomForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const id = document.getElementById('editRoomId').value;
+        const name = document.getElementById('editRoomName').value;
+        const capacity = parseInt(document.getElementById('editRoomCapacity').value);
+        const hasProjector = document.getElementById('editRoomProjector').checked;
 
-    try {
-        const response = await fetch(`/api/rooms/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, capacity: capacity, has_projector: hasProjector })
-        });
-        const data = await response.json();
-        
-        if (response.ok) {
-            window.location.reload(); 
-        } else {
-            alert('Błąd: ' + data.error);
+        try {
+            const response = await fetch(`/api/rooms/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, capacity: capacity, has_projector: hasProjector })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Błąd: ' + data.error);
+            }
+        } catch (error) {
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
         }
-    } catch (error) {
-        alert('Wystąpił błąd podczas komunikacji z serwerem.');
-    }
-});
+    });
+}
