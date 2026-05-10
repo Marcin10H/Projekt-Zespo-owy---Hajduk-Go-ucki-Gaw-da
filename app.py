@@ -1,6 +1,7 @@
 ﻿from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -24,6 +25,17 @@ class User(db.Model):
     password = db.Column(db.String(120), nullable=False)
     role = db.Column(db.String(20), nullable=False)
     must_change_password = db.Column(db.Boolean, default=False)
+
+class Reservation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    is_recurring = db.Column(db.Boolean, default=False)
+
+    room = db.relationship('Room', backref=db.backref('reservations', lazy=True))
+    user = db.relationship('User', backref=db.backref('reservations', lazy=True))
 
 
 with app.app_context():
@@ -72,22 +84,19 @@ def login_page():
 def login():
     login_value = request.form.get('login', '').strip()
     password = request.form.get('password', '')
-    selected_role = request.form.get('role', '')
 
     user = User.query.filter_by(login=login_value).first()
+    
     if not user or user.password != password:
         return render_template('login.html', error='Niepoprawny login lub hasło.')
-
-    if user.role != selected_role:
-        return render_template('login.html', error='Wybrano niepoprawną rolę dla tego konta.')
 
     session['user_id'] = user.id
     session['username'] = user.username
     session['login'] = user.login
-    session['role'] = user.role
+    session['role'] = user.role 
     session['must_change_password'] = user.must_change_password
+    
     return redirect(url_for('panel'))
-
 
 @app.route('/logout', methods=['POST'])
 @login_required
@@ -100,8 +109,22 @@ def logout():
 @login_required
 def panel():
     rooms = Room.query.all()
-    success = session.pop('success', None)
-    return render_template('index.html', rooms=rooms, success=success)
+    user_res = Reservation.query.filter_by(user_id=session['user_id']).order_by(Reservation.start_time.asc()).all()
+    
+    return render_template('index.html', rooms=rooms, user_reservations=user_res)
+
+# Dodaj nowy endpoint do pobierania rezerwacji konkretnej sali (dla modala)
+@app.route('/api/rooms/<int:room_id>/reservations', methods=['GET'])
+@login_required
+def get_room_reservations(room_id):
+    reservations = Reservation.query.filter_by(room_id=room_id).filter(Reservation.end_time >= datetime.now()).all()
+    res_list = [{
+        'id': r.id,
+        'user': r.user.username,
+        'start': r.start_time.strftime('%Y-%m-%d %H:%M'),
+        'end': r.end_time.strftime('%Y-%m-%d %H:%M')
+    } for r in reservations]
+    return jsonify(res_list)
 
 
 @app.route('/users', methods=['POST'])
@@ -133,28 +156,30 @@ def add_user():
     session['success'] = f'Użytkownik {username} został dodany.'
     return redirect(url_for('panel'))
 
-
-@app.route('/change-password', methods=['POST'])
+@app.route('/change_password', methods=['POST'])
 @login_required
 def change_password():
-    if session.get('role') != 'pracownik':
-        return redirect(url_for('panel'))
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
 
-    new_password = request.form.get('new_password', '').strip()
-    if not new_password:
-        return render_template('index.html', rooms=Room.query.all(), error='Nowe hasło nie może być puste.')
+    # Pobieramy dane potrzebne do ponownego wyrenderowania strony w razie błędu
+    rooms = Room.query.all()
+    user_res = Reservation.query.filter_by(user_id=session['user_id']).order_by(Reservation.start_time.asc()).all()
+
+    if not new_password or not confirm_password:
+        return render_template('index.html', rooms=rooms, user_reservations=user_res, error="Oba pola są wymagane.")
+
+    if new_password != confirm_password:
+        return render_template('index.html', rooms=rooms, user_reservations=user_res, error="Hasła nie są identyczne.")
 
     user = User.query.get(session['user_id'])
-    if not user:
-        session.clear()
-        return redirect(url_for('login_page'))
-
     user.password = new_password
     user.must_change_password = False
     db.session.commit()
-    session['must_change_password'] = False
-    return render_template('index.html', rooms=Room.query.all(), success='Hasło zostało zmienione.')
 
+    # Wylogowanie po zmianie hasła - to rozwiązuje problem z odświeżaniem listy rezerwacji
+    session.clear()
+    return render_template('login.html', success="Hasło zostało zmienione. Zaloguj się ponownie nowym hasłem.")
 
 @app.route('/api/rooms', methods=['POST'])
 @login_required
@@ -230,6 +255,63 @@ def edit_room(room_id):
         db.session.rollback()
         return jsonify({'error': f'Błąd zapisu w bazie: {str(e)}'}), 500
 
+@app.route('/api/reservations', methods=['POST'])
+@login_required
+def make_reservation():
+    data = request.get_json()
+    room_id = data.get('room_id')
+    start_str = data.get('start_time')
+    end_str = data.get('end_time')
+    is_recurring = data.get('is_recurring', False)
+
+    start_time = datetime.strptime(start_str, '%Y-%m-%dT%H:%M')
+    end_time = datetime.strptime(end_str, '%Y-%m-%dT%H:%M')
+
+    if start_time >= end_time:
+        return jsonify({'error': 'Czas zakończenia musi być po czasie rozpoczęcia.'}), 400
+
+    def check_conflict(s, e):
+        return Reservation.query.filter(
+            Reservation.room_id == room_id,
+            Reservation.start_time < e,
+            Reservation.end_time > s
+        ).first()
+
+    occurrences = 5 if is_recurring else 1
+    to_create = []
+
+    for i in range(occurrences):
+        current_start = start_time + timedelta(weeks=i)
+        current_end = end_time + timedelta(weeks=i)
+        
+        conflict = check_conflict(current_start, current_end)
+        if conflict:
+            return jsonify({'error': f'Sala zajęta w terminie {current_start.strftime("%Y-%m-%d %H:%M")}'}), 400
+        
+        new_res = Reservation(
+            room_id=room_id,
+            user_id=session['user_id'],
+            start_time=current_start,
+            end_time=current_end,
+            is_recurring=is_recurring
+        )
+        to_create.append(new_res)
+
+    for res in to_create:
+        db.session.add(res)
+    
+    db.session.commit()
+    return jsonify({'message': 'Zarezerwowano pomyślnie!'}), 201
+
+@app.route('/api/reservations/<int:res_id>', methods=['DELETE'])
+@login_required
+def cancel_reservation(res_id):
+    res = Reservation.query.get(res_id)
+    if not res or res.user_id != session['user_id']:
+        return jsonify({'error': 'Nie możesz odwołać tej rezerwacji.'}), 403
+    db.session.delete(res)
+    db.session.commit()
+    return jsonify({'message': 'Odwołano rezerwację.'})
 
 if __name__ == '__main__':
     app.run(debug=True)

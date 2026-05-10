@@ -75,18 +75,23 @@
             </div>
             {% else %}
             <div class="col-md-4 mb-4">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm border-primary">
                     <div class="card-body">
                         <h5 class="card-title text-primary mb-3">🔐 Zmień hasło</h5>
                         {% if session.get('must_change_password') %}
-                        <p class="text-muted">To hasło jest startowe - ustaw teraz własne.</p>
+                        <p class="text-danger small">Wymagana zmiana hasła startowego!</p>
                         {% endif %}
+                        
                         <form method="POST" action="{{ url_for('change_password') }}">
                             <div class="mb-3">
                                 <label class="form-label">Nowe hasło</label>
                                 <input type="password" class="form-control" name="new_password" required>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100">Zapisz nowe hasło</button>
+                            <div class="mb-3">
+                                <label class="form-label">Powtórz nowe hasło</label>
+                                <input type="password" class="form-control" name="confirm_password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Zapisz i zaloguj ponownie</button>
                         </form>
                     </div>
                 </div>
@@ -106,8 +111,7 @@
                                     <strong>Rzutnik:</strong> {{ "✅ Tak" if room.has_projector else "❌ Brak" }}
                                 </p>
                                 <div class="mt-auto">
-                                    <button class="btn btn-outline-primary w-100 mb-2">Zarezerwuj</button>
-                                    {% if session['role'] == 'admin' %}
+<button class="btn btn-primary w-100" onclick="openReserveModal('{{ room.id }}', '{{ room.name }}')">Zarezerwuj</button>                                    {% if session['role'] == 'admin' %}
                                     <button class="btn btn-outline-secondary w-100 mb-2"
                                         data-id="{{ room.id }}"
                                         data-name="{{ room.name }}"
@@ -124,8 +128,78 @@
                 </div>
             </div>
         </div>
-    </div>
+    <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📅 Rezerwacja sali: <span id="modalRoomName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalAlert" class="alert d-none"></div>
 
+                <form id="reservationForm">
+                    <input type="hidden" id="reserveRoomId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Początek</label>
+                            <input type="datetime-local" class="form-control" id="startTime" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Koniec</label>
+                            <input type="datetime-local" class="form-control" id="endTime" required>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="isRecurring">
+                        <label class="form-check-label" for="isRecurring">Powtarzaj co tydzień (przez miesiąc)</label>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 py-2">Potwierdź rezerwację</button>
+                </form>
+                
+                <hr class="my-4">
+                <h6>🗓️ Nadchodzące rezerwacje tej sali:</h6>
+                <div id="currentReservations" class="list-group list-group-flush mt-2 border rounded p-2 bg-light" style="max-height: 150px; overflow-y: auto;">
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<div class="mt-5 pb-5">
+    <h2 class="mb-4" style="border-left: 5px solid #0D6EFD; padding-left: 15px;">📋 Moje Rezerwacje</h2>
+    <div class="table-responsive bg-white p-3 rounded shadow-sm">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Sala</th>
+                    <th>Termin</th>
+                    <th>Cykliczność</th>
+                    <th>Akcja</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for res in user_reservations %}
+                <tr>
+                    <td><strong>{{ res.room.name }}</strong></td>
+                    <td>{{ res.start_time.strftime('%d.%m %H:%M') }} - {{ res.end_time.strftime('%H:%M') }}</td>
+                    <td>{{ "✅ Tak" if res.is_recurring else "❌ Nie" }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="cancelReservation({{ res.id }})">
+                            Odwołaj
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted">Nie masz jeszcze żadnych rezerwacji.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
     <div class="modal fade" id="editRoomModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
