@@ -26,6 +26,7 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False)
     must_change_password = db.Column(db.Boolean, default=False)
 
+
 class Reservation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
@@ -38,6 +39,7 @@ class Reservation(db.Model):
     user = db.relationship('User', backref=db.backref('reservations', lazy=True))
 
 
+# przy pierwszym uruchomieniu tworzymy konto admin
 with app.app_context():
     db.create_all()
     admin_user = User.query.filter_by(login='admin').first()
@@ -92,8 +94,7 @@ def login():
 
     session['user_id'] = user.id
     session['username'] = user.username
-    session['login'] = user.login
-    session['role'] = user.role 
+    session['role'] = user.role
     session['must_change_password'] = user.must_change_password
     
     return redirect(url_for('panel'))
@@ -110,16 +111,145 @@ def logout():
 def panel():
     rooms = Room.query.all()
     user_res = Reservation.query.filter_by(user_id=session['user_id']).order_by(Reservation.start_time.asc()).all()
-    
-    return render_template('index.html', rooms=rooms, user_reservations=user_res)
+    all_reservations = None
+    users = None
+    success = session.pop('success', None)
 
-# Dodaj nowy endpoint do pobierania rezerwacji konkretnej sali (dla modala)
+    if session.get('role') == 'admin':
+        all_reservations = (
+            Reservation.query
+            .order_by(Reservation.start_time.asc())
+            .all()
+        )
+        users = User.query.filter(User.role != 'admin').order_by(User.username.asc()).all()
+
+    return render_template(
+        'index.html',
+        rooms=rooms,
+        user_reservations=user_res,
+        all_reservations=all_reservations,
+        users=users,
+        success=success,
+    )
+
+@app.route('/api/rooms/search', methods=['GET'])
+@login_required
+def search_rooms():
+    min_capacity = request.args.get('min_capacity', type=int)
+    requires_projector = request.args.get('requires_projector', 'false').lower() == 'true'
+    start_str = request.args.get('start_time', '').strip()
+    end_str = request.args.get('end_time', '').strip()
+
+    query = Room.query
+
+    if min_capacity is not None and min_capacity > 0:
+        query = query.filter(Room.capacity >= min_capacity)
+
+    if requires_projector:
+        query = query.filter(Room.has_projector.is_(True))
+
+    rooms = query.all()
+
+    if start_str and end_str:
+        try:
+            start_time = datetime.strptime(start_str, '%Y-%m-%dT%H:%M')
+            end_time = datetime.strptime(end_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            return jsonify({'error': 'Nieprawidłowy format daty.'}), 400
+
+        if start_time >= end_time:
+            return jsonify({'error': 'Czas zakończenia musi być po czasie rozpoczęcia.'}), 400
+
+        # czy sala wolna - sprawdzamy czy terminy sie nakladaja
+        available = []
+        for room in rooms:
+            conflict = Reservation.query.filter(
+                Reservation.room_id == room.id,
+                Reservation.start_time < end_time,
+                Reservation.end_time > start_time,
+            ).first()
+            if not conflict:
+                available.append(room)
+        rooms = available
+
+    return jsonify([
+        {
+            'id': r.id,
+            'name': r.name,
+            'capacity': r.capacity,
+            'has_projector': r.has_projector,
+        }
+        for r in rooms
+    ])
+
+
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+@login_required
+@admin_required_api
+def edit_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Nie znaleziono użytkownika.'}), 404
+    if user.role == 'admin':
+        return jsonify({'error': 'Nie można edytować konta administratora.'}), 403
+
+    data = request.get_json() or {}
+
+    if 'username' in data:
+        username = (data['username'] or '').strip()
+        if not username:
+            return jsonify({'error': 'Nazwa użytkownika nie może być pusta.'}), 400
+        user.username = username
+
+    if 'login' in data:
+        login_value = (data['login'] or '').strip()
+        if not login_value:
+            return jsonify({'error': 'Login nie może być pusty.'}), 400
+        existing = User.query.filter(User.login == login_value, User.id != user.id).first()
+        if existing:
+            return jsonify({'error': 'Ten login jest już zajęty.'}), 409
+        user.login = login_value
+
+    if 'password' in data and data['password']:
+        user.password = data['password']
+        user.must_change_password = data.get('must_change_password', True)
+
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Dane użytkownika zostały zaktualizowane.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Błąd zapisu: {str(e)}'}), 500
+
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@login_required
+@admin_required_api
+def delete_user(user_id):
+    if user_id == session.get('user_id'):
+        return jsonify({'error': 'Nie możesz usunąć własnego konta.'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Nie znaleziono użytkownika.'}), 404
+    if user.role == 'admin':
+        return jsonify({'error': 'Nie można usunąć konta administratora.'}), 403
+
+    try:
+        Reservation.query.filter_by(user_id=user.id).delete()
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'message': 'Użytkownik został usunięty.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Błąd usuwania: {str(e)}'}), 500
+
+
 @app.route('/api/rooms/<int:room_id>/reservations', methods=['GET'])
 @login_required
 def get_room_reservations(room_id):
     reservations = Reservation.query.filter_by(room_id=room_id).filter(Reservation.end_time >= datetime.now()).all()
     res_list = [{
-        'id': r.id,
         'user': r.user.username,
         'start': r.start_time.strftime('%Y-%m-%d %H:%M'),
         'end': r.end_time.strftime('%Y-%m-%d %H:%M')
@@ -162,7 +292,6 @@ def change_password():
     new_password = request.form.get('new_password')
     confirm_password = request.form.get('confirm_password')
 
-    # Pobieramy dane potrzebne do ponownego wyrenderowania strony w razie błędu
     rooms = Room.query.all()
     user_res = Reservation.query.filter_by(user_id=session['user_id']).order_by(Reservation.start_time.asc()).all()
 
@@ -177,8 +306,7 @@ def change_password():
     user.must_change_password = False
     db.session.commit()
 
-    # Wylogowanie po zmianie hasła - to rozwiązuje problem z odświeżaniem listy rezerwacji
-    session.clear()
+    session.clear()  # wylogowanie po zmianie hasla
     return render_template('login.html', success="Hasło zostało zmienione. Zaloguj się ponownie nowym hasłem.")
 
 @app.route('/api/rooms', methods=['POST'])
@@ -271,13 +399,14 @@ def make_reservation():
         return jsonify({'error': 'Czas zakończenia musi być po czasie rozpoczęcia.'}), 400
 
     def check_conflict(s, e):
+        # nakladanie terminow
         return Reservation.query.filter(
             Reservation.room_id == room_id,
             Reservation.start_time < e,
             Reservation.end_time > s
         ).first()
 
-    occurrences = 5 if is_recurring else 1
+    occurrences = 5 if is_recurring else 1  # co tydzien przez miesiac
     to_create = []
 
     for i in range(occurrences):
@@ -307,7 +436,11 @@ def make_reservation():
 @login_required
 def cancel_reservation(res_id):
     res = Reservation.query.get(res_id)
-    if not res or res.user_id != session['user_id']:
+    if not res:
+        return jsonify({'error': 'Nie znaleziono rezerwacji.'}), 404
+    is_owner = res.user_id == session['user_id']
+    is_admin = session.get('role') == 'admin'
+    if not is_owner and not is_admin:
         return jsonify({'error': 'Nie możesz odwołać tej rezerwacji.'}), 403
     db.session.delete(res)
     db.session.commit()
