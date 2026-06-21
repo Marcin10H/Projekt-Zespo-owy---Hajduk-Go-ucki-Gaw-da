@@ -1,6 +1,6 @@
 ﻿# System Zarzadzania Rezerwacjami Sal - Proejkt z przedmiotu Projekt Zespołowy, pokazywany co 2 tygodnie na zajęciach.
 
-Projet jest robiony stopniowo i jest to prototyp, nie jest idealny, ale wszystkie najważniejsze zmiany potrzebne do poddania go ocenie będą poprawione lub wykonane później. (Podział plików na osobne, Migracja bazy, Hashowanie haseł, Ważne informacje poza kodem itp).
+Projet jest robiony stopniowo i jest to prototyp. Do zrobienia m.in. podzial plikow na osobne moduly i migracja bazy.
 
 Wewnetrzna aplikacja webowa do zarzadzania i rezerwacji sal konferencyjnych w firmie.
 
@@ -10,6 +10,7 @@ Obecna wersja obejmuje:
 * panel administratora do zarzadzania salami,
 * mozliwosc dodawania pracownikow przez administratora,
 * mozliwosc zmiany hasla przez pracownika,
+* hashowanie hasel i podstawowe zabezpieczenia (CSRF, role),
 * baze danych SQLite z automatycznym kontem startowym admin/admin.
 
 ## Instrukcja uruchomienia lokalnego
@@ -28,7 +29,7 @@ python -m venv venv
 
 ### 3. Instalacja bibliotek
 ```bash
-python -m pip install Flask flask-sqlalchemy
+python -m pip install -r requirements.txt
 ```
 
 ### 4. Uruchomienie serwera

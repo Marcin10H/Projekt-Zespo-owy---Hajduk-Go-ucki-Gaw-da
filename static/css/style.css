@@ -1,7 +1,5 @@
-
-
 .custom-nav {
-    background-color: #004a99; 
+    background-color: #004a99;
 }
 
 .room-card {
@@ -24,4 +22,49 @@ h2,
     color: #333;
     border-left: 5px solid #004a99;
     padding-left: 15px;
+}
+
+.collapsible-section {
+    margin-bottom: 0.5rem;
+}
+
+.section-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.section-toggle:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-toggle:focus-visible {
+    outline: 2px solid #004a99;
+    outline-offset: 2px;
+}
+
+.section-chevron {
+    flex-shrink: 0;
+    width: 0.6rem;
+    height: 0.6rem;
+    margin-left: 1rem;
+    border-right: 2px solid #004a99;
+    border-bottom: 2px solid #004a99;
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+}
+
+.section-toggle:not(.collapsed) .section-chevron {
+    transform: rotate(-135deg);
+    margin-top: 0.35rem;
 }

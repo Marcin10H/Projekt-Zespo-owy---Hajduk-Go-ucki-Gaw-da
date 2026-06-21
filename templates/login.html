@@ -27,6 +27,7 @@
                         <div class="alert alert-success" role="alert">{{ success }}</div>
                         {% endif %}
                         <form method="POST" action="{{ url_for('login') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-3">
                                 <label class="form-label">Login</label>
                                 <input type="text" class="form-control" name="login" required>

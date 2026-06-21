@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>System Rezerwacji</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -14,6 +15,7 @@
             <div class="d-flex align-items-center gap-3 text-white">
                 <span>{{ session['username'] }} ({{ session['role'] }})</span>
                 <form method="POST" action="{{ url_for('logout') }}" class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-sm btn-outline-light">Wyloguj</button>
                 </form>
             </div>
@@ -26,6 +28,11 @@
         {% endif %}
         {% if success %}
         <div class="alert alert-success" role="alert">{{ success }}</div>
+        {% endif %}
+        {% if force_password_change %}
+        <div class="alert alert-warning" role="alert">
+            Musisz zmienić hasło startowe, zanim będziesz mógł korzystać z reszty systemu.
+        </div>
         {% endif %}
 
         <div class="row">
@@ -56,6 +63,7 @@
                     <div class="card-body">
                         <h5 class="card-title text-primary mb-3">Dodaj pracownika</h5>
                         <form method="POST" action="{{ url_for('add_user') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-3">
                                 <label class="form-label">Nazwa użytkownika</label>
                                 <input type="text" class="form-control" name="username" required>
@@ -66,7 +74,8 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Hasło startowe</label>
-                                <input type="password" class="form-control" name="password" required>
+                                <input type="password" class="form-control" name="password" required minlength="8">
+                                <small class="text-muted">Minimum 8 znaków.</small>
                             </div>
                             <button type="submit" class="btn btn-primary w-100">Dodaj użytkownika</button>
                         </form>
@@ -83,13 +92,15 @@
                         {% endif %}
 
                         <form method="POST" action="{{ url_for('change_password') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-3">
                                 <label class="form-label">Nowe hasło</label>
-                                <input type="password" class="form-control" name="new_password" required>
+                                <input type="password" class="form-control" name="new_password" required minlength="8">
+                                <small class="text-muted">Minimum 8 znaków.</small>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Powtórz nowe hasło</label>
-                                <input type="password" class="form-control" name="confirm_password" required>
+                                <input type="password" class="form-control" name="confirm_password" required minlength="8">
                             </div>
                             <button type="submit" class="btn btn-primary w-100">Zapisz i zaloguj ponownie</button>
                         </form>
@@ -98,6 +109,7 @@
             </div>
             {% endif %}
 
+            {% if not force_password_change %}
             <div class="col-md-8">
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
@@ -134,7 +146,7 @@
                 <div id="roomsFilterInfo" class="alert alert-info d-none"></div>
                 <div class="row" id="roomsContainer">
                     {% for room in rooms %}
-                    <div class="col-md-6 mb-3 room-item" data-room-id="{{ room.id }}">
+                    <div class="col-md-6 mb-3">
                         <div class="card shadow-sm room-card h-100">
                             <div class="card-body d-flex flex-column">
                                 <h5 class="card-title text-primary">{{ room.name }}</h5>
@@ -161,8 +173,10 @@
                 </div>
                 <p id="noRoomsMessage" class="text-muted text-center d-none">Brak sal spełniających podane kryteria.</p>
             </div>
+            {% endif %}
         </div>
 
+        {% if not force_password_change %}
         <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -202,8 +216,12 @@
         </div>
 
         {% if session['role'] == 'admin' %}
-        <div class="mt-5">
-            <h2 class="mb-4 section-title">Zarządzanie użytkownikami</h2>
+        <div class="collapsible-section mt-4">
+            <button class="section-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUsers" aria-expanded="false" aria-controls="collapseUsers">
+                <span class="section-title mb-0">Zarządzanie użytkownikami</span>
+                <span class="section-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="collapse" id="collapseUsers">
             <div class="table-responsive bg-white p-3 rounded shadow-sm">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
@@ -243,10 +261,15 @@
                     </tbody>
                 </table>
             </div>
+            </div>
         </div>
 
-        <div class="mt-5 pb-3">
-            <h2 class="mb-4 section-title">Wszystkie rezerwacje</h2>
+        <div class="collapsible-section mt-4 pb-3">
+            <button class="section-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAllReservations" aria-expanded="false" aria-controls="collapseAllReservations">
+                <span class="section-title mb-0">Wszystkie rezerwacje</span>
+                <span class="section-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="collapse" id="collapseAllReservations">
             <div class="table-responsive bg-white p-3 rounded shadow-sm">
                 <table class="table table-hover">
                     <thead class="table-light">
@@ -277,11 +300,17 @@
                     </tbody>
                 </table>
             </div>
+            </div>
         </div>
         {% endif %}
 
-        <div class="mt-5 pb-5">
-            <h2 class="mb-4 section-title">Moje rezerwacje</h2>
+        <div class="collapsible-section mt-4 pb-5">
+            {% if not force_password_change %}
+            <button class="section-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMyReservations" aria-expanded="false" aria-controls="collapseMyReservations">
+                <span class="section-title mb-0">Moje rezerwacje</span>
+                <span class="section-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="collapse" id="collapseMyReservations">
             <div class="table-responsive bg-white p-3 rounded shadow-sm">
                 <table class="table table-hover">
                     <thead class="table-light">
@@ -310,7 +339,10 @@
                     </tbody>
                 </table>
             </div>
+            </div>
+            {% endif %}
         </div>
+        {% endif %}
     </div>
 
     <div class="modal fade" id="editRoomModal" tabindex="-1">

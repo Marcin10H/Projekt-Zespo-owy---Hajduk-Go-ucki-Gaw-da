@@ -1,5 +1,23 @@
 ﻿const IS_ADMIN = document.body.dataset.isAdmin === 'true';
 
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+function apiFetch(url, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    const method = (options.method || 'GET').toUpperCase();
+
+    if (method !== 'GET' && method !== 'HEAD') {
+        headers['X-CSRFToken'] = getCsrfToken();
+    }
+    if (options.body && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    return fetch(url, { ...options, headers });
+}
+
 const addRoomForm = document.getElementById('addRoomForm');
 if (addRoomForm) {
     addRoomForm.addEventListener('submit', async function(event) {
@@ -9,9 +27,8 @@ if (addRoomForm) {
         const hasProjector = document.getElementById('roomProjector').checked;
 
         try {
-            const response = await fetch('/api/rooms', {
+            const response = await apiFetch('/api/rooms', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, capacity: capacity, has_projector: hasProjector })
             });
             const data = await response.json();
@@ -29,7 +46,7 @@ if (addRoomForm) {
 async function deleteRoom(roomId) {
     if (!confirm('Czy na pewno chcesz usunąć tę salę?')) return;
     try {
-        const response = await fetch(`/api/rooms/${roomId}`, { method: 'DELETE' });
+        const response = await apiFetch(`/api/rooms/${roomId}`, { method: 'DELETE' });
         const data = await response.json();
         if (response.ok) {
             window.location.reload();
@@ -65,9 +82,8 @@ if (editRoomForm) {
         const hasProjector = document.getElementById('editRoomProjector').checked;
 
         try {
-            const response = await fetch(`/api/rooms/${id}`, {
+            const response = await apiFetch(`/api/rooms/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, capacity: capacity, has_projector: hasProjector })
             });
             const data = await response.json();
@@ -116,7 +132,7 @@ function buildRoomCardHtml(room) {
             <button class="btn btn-outline-danger w-100" data-id="${room.id}" onclick="deleteRoom(this.dataset.id)">Usuń salę</button>`;
     }
     return `
-        <div class="col-md-6 mb-3 room-item" data-room-id="${room.id}">
+        <div class="col-md-6 mb-3">
             <div class="card shadow-sm room-card h-100">
                 <div class="card-body d-flex flex-column">
                     <h5 class="card-title text-primary">${room.name}</h5>
@@ -255,9 +271,8 @@ if (reservationForm) {
             is_recurring: document.getElementById('isRecurring').checked
         };
 
-        const response = await fetch('/api/reservations', {
+        const response = await apiFetch('/api/reservations', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
@@ -275,7 +290,7 @@ async function cancelReservation(resId) {
     if (!confirm('Czy na pewno chcesz odwołać tę rezerwację?')) return;
 
     try {
-        const response = await fetch(`/api/reservations/${resId}`, {
+        const response = await apiFetch(`/api/reservations/${resId}`, {
             method: 'DELETE'
         });
 
@@ -324,9 +339,8 @@ if (editUserForm) {
         }
 
         try {
-            const response = await fetch(`/api/users/${id}`, {
+            const response = await apiFetch(`/api/users/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
@@ -346,7 +360,7 @@ async function deleteUser(userId, username) {
     if (!confirm(`Czy na pewno chcesz usunąć użytkownika „${username}”? Zostaną usunięte także jego rezerwacje.`)) return;
 
     try {
-        const response = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+        const response = await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
         const data = await response.json();
         if (response.ok) {
             location.reload();
